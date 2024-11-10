@@ -202,7 +202,8 @@ int main() {
     int vertexColorLocation = glGetUniformLocation(shaderProgram1, "ourColor");
 
     glUseProgram(shaderProgram1);
-    glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+    float color[] = {0.0f, greenValue, 0.0f, 1.0f};
+    glUniform4fv(vertexColorLocation, 1, color);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     glUseProgram(shaderProgram2);
