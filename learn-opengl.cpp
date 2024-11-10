@@ -18,11 +18,12 @@ const unsigned int SCR_HEIGHT = 600;
 // vertex shader source
 const char *vertexShaderSource = R"(#version 330 core
 layout (location = 0) in vec3 aPos;
-out vec4 vertexColor;
+layout (location = 1) in vec3 aColor;
+out vec3 vertexColor;
 void main()
 {
     gl_Position = vec4(aPos, 1.0);
-    vertexColor = vec4(0.5, 0.0, 0.0, 1.0);
+    vertexColor = aColor;
 })";
 
 // fragment shader source
@@ -37,10 +38,10 @@ void main()
 
 const char *fragmentShaderSource2 = R"(#version 330 core
 out vec4 FragColor;
-in vec4 vertexColor;
+in vec3 vertexColor;
 void main()
 {
-    FragColor = vertexColor;
+    FragColor = vec4(vertexColor, 1.0f);
 } )";
 
 int main() {
@@ -139,10 +140,10 @@ int main() {
 
   // set up vertex attributes
   float vertices[] = {
-      0.5f,  0.5f,  0.0f, // top right
-      0.5f,  -0.5f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f, // bottom left
-      -0.5f, 0.5f,  0.0f  // top left
+      0.5f,  0.5f,  0.0f, 1.0f, 1.0f, 1.0f, // top right
+      0.5f,  -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom right
+      -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom left
+      -0.5f, 0.5f,  0.0f, 0.0f, 0.0f, 1.0f  // top left
   };
   unsigned int indices[] = {
       // note that we start from 0!
@@ -164,8 +165,12 @@ int main() {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
+
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                        (void *)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
 
   // note that this is allowed, the call to glVertexAttribPointer registered VBO
   // as the vertex attribute's bound vertex buffer object so afterwards we can
