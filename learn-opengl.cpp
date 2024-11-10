@@ -18,9 +18,11 @@ const unsigned int SCR_HEIGHT = 600;
 // vertex shader source
 const char *vertexShaderSource = R"(#version 330 core
 layout (location = 0) in vec3 aPos;
+out vec4 vertexColor;
 void main()
 {
     gl_Position = vec4(aPos, 1.0);
+    vertexColor = vec4(0.5, 0.0, 0.0, 1.0);
 })";
 
 // fragment shader source
@@ -33,9 +35,10 @@ void main()
 
 const char *fragmentShaderSource2 = R"(#version 330 core
 out vec4 FragColor;
+in vec4 vertexColor;
 void main()
 {
-    FragColor = vec4(1.0f, 1.0f, 0.2f, 1.0f);
+    FragColor = vertexColor;
 } )";
 
 int main() {
