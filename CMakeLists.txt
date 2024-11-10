@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(hello_triangle)
+project(learn-opengl)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,10 +14,10 @@ target_include_directories(glad PUBLIC
 )
 
 # Add executable
-add_executable(hello_triangle hello_triangle.cpp)
+add_executable(learn-opengl learn-opengl.cpp)
 
 # Link libraries
-target_link_libraries(hello_triangle
+target_link_libraries(learn-opengl
     PRIVATE
     glad
     "-framework OpenGL"
@@ -28,7 +28,7 @@ target_link_libraries(hello_triangle
     glfw
 )
 
-target_include_directories(hello_triangle
+target_include_directories(learn-opengl
     PRIVATE
     glad/include
 )
