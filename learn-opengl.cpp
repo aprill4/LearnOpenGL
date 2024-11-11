@@ -5,8 +5,12 @@
 // glad needs to be included before GLFW
 #include <GLFW/glfw3.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include <iostream>
-using std::cout, std::endl;
+using std::cout;
+using std::endl;
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -19,11 +23,16 @@ const unsigned int SCR_HEIGHT = 800;
 const char *vertexShaderSource = R"(#version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aColor;
+layout (location = 2) in vec2 aTexCoord;
+
 out vec3 vertexColor;
+out vec2 TexCoord;
+
 void main()
 {
     gl_Position = vec4(aPos, 1.0);
     vertexColor = aColor;
+    TexCoord = aTexCoord;
 })";
 
 // fragment shader source
@@ -39,9 +48,13 @@ void main()
 const char *fragmentShaderSource2 = R"(#version 330 core
 out vec4 FragColor;
 in vec3 vertexColor;
+in vec2 TexCoord;
+
+uniform sampler2D ourTexture;
+
 void main()
 {
-    FragColor = vec4(vertexColor, 1.0f);
+    FragColor = texture(ourTexture, TexCoord) * vec4(vertexColor, 1.0);
 } )";
 
 int main() {
@@ -138,18 +151,49 @@ int main() {
   glDeleteShader(fragmentShader1);
   glDeleteShader(fragmentShader2);
 
+  // generate a texture
+  unsigned texture;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  // load image
+  int width, height, nrChannels;
+  unsigned char *data =
+      stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+  if (!data) {
+    const char *reason = stbi_failure_reason();
+    cout << "Failed to load image\n" << reason;
+    return -1;
+  }
+
+  // copy data
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
+               GL_UNSIGNED_BYTE, data);
+  glGenerateMipmap(GL_TEXTURE_2D);
+
+  // delete image
+  stbi_image_free(data);
+
+  float texCoords[] = {1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f};
+
   // set up vertex attributes
   float vertices[] = {
-      0.5f,  0.5f,  0.0f, 1.0f, 1.0f, 1.0f, // top right
-      0.5f,  -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom left
-      -0.5f, 0.5f,  0.0f, 0.0f, 0.0f, 1.0f  // top left
+      0.5f,  0.5f,  0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, // top right
+      0.5f,  -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom right
+      -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, // bottom left
+      -0.5f, 0.5f,  0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f  // top left
   };
   unsigned int indices[] = {
       // note that we start from 0!
       0, 1, 3, // first Triangle
       1, 2, 3  // second Triangle
   };
+
   unsigned int VBO, VAO, EBO;
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
@@ -165,12 +209,16 @@ int main() {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                         (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
+
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+                        (void *)(6 * sizeof(float)));
+  glEnableVertexAttribArray(2);
 
   // note that this is allowed, the call to glVertexAttribPointer registered VBO
   // as the vertex attribute's bound vertex buffer object so afterwards we can
@@ -212,6 +260,7 @@ int main() {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     glUseProgram(shaderProgram2);
+    glBindTexture(GL_TEXTURE_2D, texture);
     glBindVertexArray(
         VAO); // seeing as we only have a single VAO there's no need to bind it
               // every time, but we'll do so to keep things a bit more organized

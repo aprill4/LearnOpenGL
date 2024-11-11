@@ -38,4 +38,5 @@ target_link_libraries(learn-opengl
 target_include_directories(learn-opengl
     PRIVATE
     glad/include
+    ${CMAKE_SOURCE_DIR}  # This will allow including stb_image.h from the source directory
 )
