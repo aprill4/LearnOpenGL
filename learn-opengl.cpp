@@ -40,9 +40,14 @@ const char *fragmentShaderSource1 = R"(#version 330 core
 out vec4 FragColor;
 uniform vec4 ourColor;
 
+in vec3 vertexColor;
+in vec2 TexCoord;
+
+uniform sampler2D ourTexture;
+
 void main()
 {
-    FragColor = ourColor;
+    FragColor = ourColor * texture(ourTexture, TexCoord);
 } )";
 
 const char *fragmentShaderSource2 = R"(#version 330 core
@@ -151,34 +156,56 @@ int main() {
   glDeleteShader(fragmentShader1);
   glDeleteShader(fragmentShader2);
 
-  // generate a texture
-  unsigned texture;
-  glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_2D, texture);
+  // generate textures
+  unsigned textures[2];
+  glGenTextures(2, textures);
+
+  // bind and configure texture
+  glBindTexture(GL_TEXTURE_2D, textures[0]);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                   GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  // load image
+  // load container.jpg
   int width, height, nrChannels;
   unsigned char *data =
       stbi_load((std::string(PROJECT_SOURCE_DIR) + "/container.jpg").c_str(),
                 &width, &height, &nrChannels, 0);
-  if (!data) {
-    const char *reason = stbi_failure_reason();
-    cout << "Failed to load image\n" << reason;
-    return -1;
+  if (data) {
+    // copy data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
+                 GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
   }
 
-  // copy data
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
-               GL_UNSIGNED_BYTE, data);
-  glGenerateMipmap(GL_TEXTURE_2D);
+  // bind and configure texture
+  glBindTexture(GL_TEXTURE_2D, textures[1]);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  // load wall.jpg
+  data = stbi_load((std::string(PROJECT_SOURCE_DIR) + "/wall.jpg").c_str(),
+                   &width, &height, &nrChannels, 0);
+  if (data) {
+    // copy data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
+                 GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
 
   // delete image
   stbi_image_free(data);
+
+  glUseProgram(shaderProgram1);
+  glUniform1i(glGetUniformLocation(shaderProgram1, "ourTexture"), 0);
+
+  glUseProgram(shaderProgram2);
+  glUniform1i(glGetUniformLocation(shaderProgram2, "ourTexture"), 1);
 
   float texCoords[] = {1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f};
 
@@ -256,16 +283,22 @@ int main() {
     int vertexColorLocation = glGetUniformLocation(shaderProgram1, "ourColor");
 
     glUseProgram(shaderProgram1);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
+
     float color[] = {0.0f, greenValue, 0.0f, 1.0f};
     glUniform4fv(vertexColorLocation, 1, color);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 
     glUseProgram(shaderProgram2);
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, textures[1]);
+
     glBindVertexArray(
         VAO); // seeing as we only have a single VAO there's no need to bind it
               // every time, but we'll do so to keep things a bit more organized
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)(3 * sizeof(int)));
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void *)(3 * sizeof(int)));
     // glBindVertexArray(0); // no need to unbind it every time
 
     // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved
