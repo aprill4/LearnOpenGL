@@ -164,7 +164,8 @@ int main() {
   // load image
   int width, height, nrChannels;
   unsigned char *data =
-      stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+      stbi_load((std::string(PROJECT_SOURCE_DIR) + "/container.jpg").c_str(),
+                &width, &height, &nrChannels, 0);
   if (!data) {
     const char *reason = stbi_failure_reason();
     cout << "Failed to load image\n" << reason;

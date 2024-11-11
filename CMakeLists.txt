@@ -20,6 +20,8 @@ target_include_directories(glad PUBLIC
     glad/include
 )
 
+add_definitions(-DPROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+
 # Add executable
 add_executable(learn-opengl learn-opengl.cpp)
 
