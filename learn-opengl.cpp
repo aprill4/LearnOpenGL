@@ -184,28 +184,28 @@ int main() {
   glBindTexture(GL_TEXTURE_2D, textures[1]);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+  // float borderColor[] = {1.0f, 1.0f, 0.0f, 1.0f};
+  // glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                   GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   // load another image
-  data = stbi_load((std::string(PROJECT_SOURCE_DIR) + "/awesomeface.png").c_str(),
-                   &width, &height, &nrChannels, 0);
+  stbi_set_flip_vertically_on_load(true);
+  data =
+      stbi_load((std::string(PROJECT_SOURCE_DIR) + "/awesomeface.png").c_str(),
+                &width, &height, &nrChannels, 0);
   if (data) {
     // copy data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
   }
 
   // delete image
   stbi_image_free(data);
-
-  glUseProgram(shaderProgram1);
-  glUniform1i(glGetUniformLocation(shaderProgram1, "ourTexture"), 0);
-
-  glUseProgram(shaderProgram2);
-  glUniform1i(glGetUniformLocation(shaderProgram2, "ourTexture"), 1);
 
   // set up vertex attributes
   float vertices[] = {
@@ -263,6 +263,11 @@ int main() {
 
   // uncomment this call to draw in wireframe polygons.
   // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  glUseProgram(shaderProgram1);
+  glUniform1i(glGetUniformLocation(shaderProgram1, "ourTexture"), 1);
+
+  glUseProgram(shaderProgram2);
+  glUniform1i(glGetUniformLocation(shaderProgram2, "ourTexture"), 1);
 
   // render loop
   // -----------
@@ -276,25 +281,32 @@ int main() {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
+    glUseProgram(shaderProgram1);
+    glBindVertexArray(VAO);
     float timeValue = glfwGetTime();
-    float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
     int vertexColorLocation = glGetUniformLocation(shaderProgram1, "ourColor");
 
-    glUseProgram(shaderProgram1);
+    float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
+    float color[] = {0.2f, greenValue, 0.0f, 1.0f};
+    glUniform4fv(vertexColorLocation, 1, color);
+
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, textures[1]);
-
-    glBindVertexArray(
-        VAO); // seeing as we only have a single VAO there's no need to bind it
-              // every time, but we'll do so to keep things a bit more organized
-    float color[] = {0.0f, greenValue, 0.0f, 1.0f};
-    glUniform4fv(vertexColorLocation, 1, color);
 
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 
     glUseProgram(shaderProgram2);
+    // seeing as we only have a single VAO there's no need to bind it
+    // every time, but we'll do so to keep things a bit more organized
+    glBindVertexArray(VAO);
+    glUniform1i(glGetUniformLocation(shaderProgram2, "ourTexture"), 1);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, textures[1]);
+
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void *)(3 * sizeof(int)));
-    // glBindVertexArray(0); // no need to unbind it every time
+    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0); // no need to unbind it every time
 
     // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved
     // etc.)
