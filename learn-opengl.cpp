@@ -188,8 +188,8 @@ int main() {
                   GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  // load wall.jpg
-  data = stbi_load((std::string(PROJECT_SOURCE_DIR) + "/wall.jpg").c_str(),
+  // load another image
+  data = stbi_load((std::string(PROJECT_SOURCE_DIR) + "/awesomeface.png").c_str(),
                    &width, &height, &nrChannels, 0);
   if (data) {
     // copy data
@@ -206,8 +206,6 @@ int main() {
 
   glUseProgram(shaderProgram2);
   glUniform1i(glGetUniformLocation(shaderProgram2, "ourTexture"), 1);
-
-  float texCoords[] = {1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f};
 
   // set up vertex attributes
   float vertices[] = {
@@ -283,21 +281,18 @@ int main() {
     int vertexColorLocation = glGetUniformLocation(shaderProgram1, "ourColor");
 
     glUseProgram(shaderProgram1);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textures[0]);
-
-    float color[] = {0.0f, greenValue, 0.0f, 1.0f};
-    glUniform4fv(vertexColorLocation, 1, color);
-
-    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
-
-    glUseProgram(shaderProgram2);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, textures[1]);
 
     glBindVertexArray(
         VAO); // seeing as we only have a single VAO there's no need to bind it
               // every time, but we'll do so to keep things a bit more organized
+    float color[] = {0.0f, greenValue, 0.0f, 1.0f};
+    glUniform4fv(vertexColorLocation, 1, color);
+
+    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+
+    glUseProgram(shaderProgram2);
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void *)(3 * sizeof(int)));
     // glBindVertexArray(0); // no need to unbind it every time
 
