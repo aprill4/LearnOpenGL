@@ -25,6 +25,14 @@ add_definitions(-DPROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 # Add executable
 add_executable(learn-opengl learn-opengl.cpp)
 
+# Add GLM as header-only library
+target_include_directories(learn-opengl
+    PRIVATE
+    glad/include
+    ${CMAKE_SOURCE_DIR} # This will allow including stb_image.h from the source directory
+    ${CMAKE_SOURCE_DIR}/glm  # Add this line to include GLM headers
+)
+
 # Link libraries
 target_link_libraries(learn-opengl
     PRIVATE
@@ -35,10 +43,4 @@ target_link_libraries(learn-opengl
     "-framework Cocoa"
     "-framework Carbon"
     glfw
-)
-
-target_include_directories(learn-opengl
-    PRIVATE
-    glad/include
-    ${CMAKE_SOURCE_DIR}  # This will allow including stb_image.h from the source directory
 )

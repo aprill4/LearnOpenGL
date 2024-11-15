@@ -5,6 +5,8 @@
 // glad needs to be included before GLFW
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
