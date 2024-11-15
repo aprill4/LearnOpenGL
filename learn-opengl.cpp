@@ -6,6 +6,8 @@
 #include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -30,9 +32,11 @@ layout (location = 2) in vec2 aTexCoord;
 out vec3 vertexColor;
 out vec2 TexCoord;
 
+uniform mat4 transform;
+
 void main()
 {
-    gl_Position = vec4(aPos, 1.0);
+    gl_Position = transform * vec4(aPos, 1.0);
     vertexColor = aColor;
     TexCoord = aTexCoord;
 })";
@@ -271,6 +275,11 @@ int main() {
   glUseProgram(shaderProgram2);
   glUniform1i(glGetUniformLocation(shaderProgram2, "ourTexture"), 1);
 
+  glm::mat4 trans = glm::mat4(1.0f);
+  // rotate around z-axis
+  trans = glm::rotate(trans, glm::radians(90.f), glm::vec3(0.0f, 0.0f, 1.0f));
+  trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
+
   // render loop
   // -----------
   while (!glfwWindowShouldClose(window)) {
@@ -284,6 +293,10 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(shaderProgram1);
+
+    int transformLoc = glGetUniformLocation(shaderProgram1, "transform");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
     glBindVertexArray(VAO);
     float timeValue = glfwGetTime();
     int vertexColorLocation = glGetUniformLocation(shaderProgram1, "ourColor");
@@ -298,6 +311,8 @@ int main() {
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 
     glUseProgram(shaderProgram2);
+    transformLoc = glGetUniformLocation(shaderProgram2, "transform");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
     // seeing as we only have a single VAO there's no need to bind it
     // every time, but we'll do so to keep things a bit more organized
     glBindVertexArray(VAO);
