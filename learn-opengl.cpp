@@ -162,57 +162,6 @@ int main() {
   glDeleteShader(fragmentShader1);
   glDeleteShader(fragmentShader2);
 
-  // generate textures
-  unsigned textures[2];
-  glGenTextures(2, textures);
-
-  // bind and configure texture
-  glBindTexture(GL_TEXTURE_2D, textures[0]);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  // load container.jpg
-  int width, height, nrChannels;
-  unsigned char *data =
-      stbi_load((std::string(PROJECT_SOURCE_DIR) + "/container.jpg").c_str(),
-                &width, &height, &nrChannels, 0);
-  if (data) {
-    // copy data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
-                 GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  }
-
-  // bind and configure texture
-  glBindTexture(GL_TEXTURE_2D, textures[1]);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-  // float borderColor[] = {1.0f, 1.0f, 0.0f, 1.0f};
-  // glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  // load another image
-  stbi_set_flip_vertically_on_load(true);
-  data =
-      stbi_load((std::string(PROJECT_SOURCE_DIR) + "/awesomeface.png").c_str(),
-                &width, &height, &nrChannels, 0);
-  if (data) {
-    // copy data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  }
-
-  // delete image
-  stbi_image_free(data);
-
   // set up vertex attributes
   float vertices[] = {
       0.5f,  0.5f,  0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, // top right
@@ -269,16 +218,63 @@ int main() {
 
   // uncomment this call to draw in wireframe polygons.
   // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+  // generate textures
+  unsigned textures[2];
+  glGenTextures(2, textures);
+
+  // bind and configure texture
+  glBindTexture(GL_TEXTURE_2D, textures[0]);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  // load container.jpg
+  int width, height, nrChannels;
+  unsigned char *data =
+      stbi_load((std::string(PROJECT_SOURCE_DIR) + "/container.jpg").c_str(),
+                &width, &height, &nrChannels, 0);
+  if (data) {
+    // copy data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
+                 GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
+
+  // bind and configure texture
+  glBindTexture(GL_TEXTURE_2D, textures[1]);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+  // float borderColor[] = {1.0f, 1.0f, 0.0f, 1.0f};
+  // glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  // load another image
+  stbi_set_flip_vertically_on_load(true);
+  data =
+      stbi_load((std::string(PROJECT_SOURCE_DIR) + "/awesomeface.png").c_str(),
+                &width, &height, &nrChannels, 0);
+  if (data) {
+    // copy data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
+
+  // delete image
+  stbi_image_free(data);
+
   glUseProgram(shaderProgram1);
   glUniform1i(glGetUniformLocation(shaderProgram1, "ourTexture"), 1);
 
   glUseProgram(shaderProgram2);
   glUniform1i(glGetUniformLocation(shaderProgram2, "ourTexture"), 1);
-
-  glm::mat4 trans = glm::mat4(1.0f);
-  // rotate around z-axis
-  trans = glm::rotate(trans, glm::radians(90.f), glm::vec3(0.0f, 0.0f, 1.0f));
-  trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
 
   // render loop
   // -----------
@@ -292,17 +288,24 @@ int main() {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
+    // transform
+    glm::mat4 trans = glm::mat4(1.0f);
+    trans = glm::translate(trans, glm::vec3(-0.5, -0.5, 0.0));
+    trans =
+        glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+
     glUseProgram(shaderProgram1);
 
     int transformLoc = glGetUniformLocation(shaderProgram1, "transform");
     glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
     glBindVertexArray(VAO);
+
     float timeValue = glfwGetTime();
     int vertexColorLocation = glGetUniformLocation(shaderProgram1, "ourColor");
 
-    float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
-    float color[] = {0.2f, greenValue, 0.0f, 1.0f};
+    float colorByTime = (sin(timeValue) / 2.0f) + 0.5f;
+    float color[] = {0.5f, colorByTime, 0.5f, 1.0f};
     glUniform4fv(vertexColorLocation, 1, color);
 
     glActiveTexture(GL_TEXTURE1);
