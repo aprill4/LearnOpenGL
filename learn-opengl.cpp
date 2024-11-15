@@ -289,15 +289,17 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     // transform
-    glm::mat4 trans = glm::mat4(1.0f);
-    trans = glm::translate(trans, glm::vec3(-0.5, -0.5, 0.0));
-    trans =
-        glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 trans1 = glm::mat4(1.0f);
+    // trans1 = glm::translate(trans1, glm::vec3(0.5, -0.5, 0.0));
+    trans1 = glm::scale(trans1,
+                        glm::vec3(sin(glfwGetTime()), sin(glfwGetTime()), 1.0));
+    trans1 =
+        glm::rotate(trans1, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
 
     glUseProgram(shaderProgram1);
 
     int transformLoc = glGetUniformLocation(shaderProgram1, "transform");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans1));
 
     glBindVertexArray(VAO);
 
@@ -314,8 +316,14 @@ int main() {
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 
     glUseProgram(shaderProgram2);
+
+    glm::mat4 trans2 = glm::mat4(1.0f);
+    //trans2 = glm::translate(trans2, glm::vec3(-0.5, 0.5, 0.0));
+    trans2 = glm::scale(trans2,
+                        glm::vec3(sin(glfwGetTime()), sin(glfwGetTime()), 1.0));
+
     transformLoc = glGetUniformLocation(shaderProgram2, "transform");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans2));
     // seeing as we only have a single VAO there's no need to bind it
     // every time, but we'll do so to keep things a bit more organized
     glBindVertexArray(VAO);
