@@ -26,34 +26,34 @@ const unsigned int SCR_HEIGHT = 800;
 // vertex shader source
 const char *vertexShaderSource = R"(#version 330 core
 layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aColor;
-layout (location = 2) in vec2 aTexCoord;
+layout (location = 1) in vec2 aTexCoord;
 
 out vec3 vertexColor;
 out vec2 TexCoord;
 
-uniform mat4 transform;
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
 
 void main()
 {
-    gl_Position = transform * vec4(aPos, 1.0);
-    vertexColor = aColor;
+    gl_Position = projection * view * model * vec4(aPos, 1.0);
     TexCoord = aTexCoord;
 })";
 
 // fragment shader source
 const char *fragmentShaderSource1 = R"(#version 330 core
 out vec4 FragColor;
-uniform vec4 ourColor;
 
 in vec3 vertexColor;
 in vec2 TexCoord;
 
-uniform sampler2D ourTexture;
+uniform sampler2D ourTexture1;
+uniform sampler2D ourTexture2;
 
 void main()
 {
-    FragColor = ourColor * texture(ourTexture, TexCoord);
+    FragColor = mix(texture(ourTexture1, TexCoord), texture(ourTexture2, TexCoord), 0.2);
 } )";
 
 const char *fragmentShaderSource2 = R"(#version 330 core
@@ -164,21 +164,33 @@ int main() {
 
   // set up vertex attributes
   float vertices[] = {
-      0.5f,  0.5f,  0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, // top right
-      0.5f,  -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, // bottom left
-      -0.5f, 0.5f,  0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f  // top left
-  };
-  unsigned int indices[] = {
-      // note that we start from 0!
-      0, 1, 3, // first Triangle
-      1, 2, 3  // second Triangle
-  };
+      -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 0.5f,  -0.5f, -0.5f, 1.0f, 0.0f,
+      0.5f,  0.5f,  -0.5f, 1.0f, 1.0f, 0.5f,  0.5f,  -0.5f, 1.0f, 1.0f,
+      -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f, -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
 
-  unsigned int VBO, VAO, EBO;
+      -0.5f, -0.5f, 0.5f,  0.0f, 0.0f, 0.5f,  -0.5f, 0.5f,  1.0f, 0.0f,
+      0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+      -0.5f, 0.5f,  0.5f,  0.0f, 1.0f, -0.5f, -0.5f, 0.5f,  0.0f, 0.0f,
+
+      -0.5f, 0.5f,  0.5f,  1.0f, 0.0f, -0.5f, 0.5f,  -0.5f, 1.0f, 1.0f,
+      -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+      -0.5f, -0.5f, 0.5f,  0.0f, 0.0f, -0.5f, 0.5f,  0.5f,  1.0f, 0.0f,
+
+      0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,  0.5f,  -0.5f, 1.0f, 1.0f,
+      0.5f,  -0.5f, -0.5f, 0.0f, 1.0f, 0.5f,  -0.5f, -0.5f, 0.0f, 1.0f,
+      0.5f,  -0.5f, 0.5f,  0.0f, 0.0f, 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+      -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.5f,  -0.5f, -0.5f, 1.0f, 1.0f,
+      0.5f,  -0.5f, 0.5f,  1.0f, 0.0f, 0.5f,  -0.5f, 0.5f,  1.0f, 0.0f,
+      -0.5f, -0.5f, 0.5f,  0.0f, 0.0f, -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
+
+      -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f, 0.5f,  0.5f,  -0.5f, 1.0f, 1.0f,
+      0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+      -0.5f, 0.5f,  0.5f,  0.0f, 0.0f, -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f};
+
+  unsigned int VBO, VAO;
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
-  glGenBuffers(1, &EBO);
   // bind the Vertex Array Object first, then bind and set vertex buffer(s), and
   // then configure vertex attributes(s).
   glBindVertexArray(VAO);
@@ -186,29 +198,17 @@ int main() {
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-               GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
                         (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
-
-  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                        (void *)(6 * sizeof(float)));
-  glEnableVertexAttribArray(2);
 
   // note that this is allowed, the call to glVertexAttribPointer registered VBO
   // as the vertex attribute's bound vertex buffer object so afterwards we can
   // safely unbind
   glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-  // remember: do NOT unbind the EBO while a VAO is active as the bound element
-  // buffer object IS stored in the VAO; keep the EBO bound.
-  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
   // You can unbind the VAO afterwards so other VAO calls won't accidentally
   // modify this VAO, but this rarely happens. Modifying other VAOs requires a
@@ -271,7 +271,8 @@ int main() {
   stbi_image_free(data);
 
   glUseProgram(shaderProgram1);
-  glUniform1i(glGetUniformLocation(shaderProgram1, "ourTexture"), 1);
+  glUniform1i(glGetUniformLocation(shaderProgram1, "ourTexture1"), 0);
+  glUniform1i(glGetUniformLocation(shaderProgram1, "ourTexture2"), 1);
 
   glUseProgram(shaderProgram2);
   glUniform1i(glGetUniformLocation(shaderProgram2, "ourTexture"), 1);
@@ -288,33 +289,39 @@ int main() {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // transform
-    glm::mat4 trans1 = glm::mat4(1.0f);
-    // trans1 = glm::translate(trans1, glm::vec3(0.5, -0.5, 0.0));
-    trans1 = glm::scale(trans1,
-                        glm::vec3(sin(glfwGetTime()), sin(glfwGetTime()), 1.0));
-    trans1 =
-        glm::rotate(trans1, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glUseProgram(shaderProgram1);
-
-    int transformLoc = glGetUniformLocation(shaderProgram1, "transform");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans1));
-
-    glBindVertexArray(VAO);
-
-    float timeValue = glfwGetTime();
-    int vertexColorLocation = glGetUniformLocation(shaderProgram1, "ourColor");
-
-    float colorByTime = (sin(timeValue) / 2.0f) + 0.5f;
-    float color[] = {0.5f, colorByTime, 0.5f, 1.0f};
-    glUniform4fv(vertexColorLocation, 1, color);
-
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, textures[1]);
 
-    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+    // transform
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 view = glm::mat4(1.0f);
+    glm::mat4 projection = glm::mat4(1.0f);
 
+    model =
+        glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    projection =
+        glm::perspective(glm::radians(45.0f),
+                         (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+
+    glUseProgram(shaderProgram1);
+
+    int modelLoc = glGetUniformLocation(shaderProgram1, "model");
+    int viewLoc = glGetUniformLocation(shaderProgram1, "view");
+    int projectionLoc = glGetUniformLocation(shaderProgram1, "projection");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+
+    /*
     glUseProgram(shaderProgram2);
 
     glm::mat4 trans2 = glm::mat4(1.0f);
@@ -333,6 +340,7 @@ int main() {
     glBindTexture(GL_TEXTURE_2D, textures[1]);
 
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void *)(3 * sizeof(int)));
+    */
     // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0); // no need to unbind it every time
 
@@ -347,7 +355,6 @@ int main() {
   // ------------------------------------------------------------------------
   glDeleteVertexArrays(1, &VAO);
   glDeleteBuffers(1, &VBO);
-  glDeleteBuffers(1, &EBO);
   glDeleteProgram(shaderProgram1);
   glDeleteProgram(shaderProgram2);
 
