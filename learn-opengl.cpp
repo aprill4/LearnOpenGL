@@ -16,6 +16,7 @@
 using std::cout;
 using std::endl;
 
+void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
 
@@ -29,6 +30,14 @@ glm::vec3 cameraUp = glm::vec3(0.f, 1.f, 0.f);
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+float LastX = SCR_WIDTH / 2;
+float LastY = SCR_HEIGHT / 2;
+bool firstMouse = true;
+
+float yaw = -90.0f;
+float pitch = 0.0f;
+glm::vec3 direction;
 
 // vertex shader source
 const char *vertexShaderSource = R"(#version 330 core
@@ -98,6 +107,7 @@ int main() {
   }
   glfwMakeContextCurrent(window);
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+  glfwSetCursorPosCallback(window, mouse_callback);
 
   // glad: load all OpenGL function pointers
   // ---------------------------------------
@@ -293,6 +303,7 @@ int main() {
       glm::vec3(1.3f, -2.0f, -2.5f),  glm::vec3(1.5f, 2.0f, -2.5f),
       glm::vec3(1.5f, 0.2f, -1.5f),   glm::vec3(-1.3f, 1.0f, -1.5f)};
 
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   // render loop
   // -----------
   while (!glfwWindowShouldClose(window)) {
@@ -378,15 +389,17 @@ int main() {
 // frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window) {
-  const float cameraSpeed = 2.5f * deltaTime;
+  const float cameraSpeed = 4.5f * deltaTime;
   if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     cameraPos += cameraSpeed * cameraFront;
   if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
     cameraPos -= cameraSpeed * cameraFront;
   if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-    cameraPos -= cameraSpeed * glm::normalize(glm::cross(cameraFront, cameraUp));
+    cameraPos -=
+        cameraSpeed * glm::normalize(glm::cross(cameraFront, cameraUp));
   if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-    cameraPos += cameraSpeed * glm::normalize(glm::cross(cameraFront, cameraUp));
+    cameraPos +=
+        cameraSpeed * glm::normalize(glm::cross(cameraFront, cameraUp));
   else if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
 }
@@ -398,4 +411,35 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
   // make sure the viewport matches the new window dimensions; note that width
   // and height will be significantly larger than specified on retina displays.
   glViewport(0, 0, width, height);
+}
+
+void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
+  if (firstMouse) {
+    xpos = LastX;
+    ypos = LastY;
+    firstMouse = false;
+  }
+
+  float xoffset = xpos - LastX;
+  float yoffset =
+      LastY - ypos; // reversed since y-coordinates go from bottom to top
+  LastX = xpos;
+  LastY = ypos;
+
+  float sensitivity = 0.05f;
+  xoffset *= sensitivity;
+  yoffset *= sensitivity;
+
+  yaw += xoffset;
+  pitch += yoffset;
+
+  if (pitch > 89.0f)
+    pitch = 89.0f;
+  if (pitch < -89.0f)
+    pitch = -89.0f;
+
+  direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+  direction.y = sin(glm::radians(pitch));
+  direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+  cameraFront = glm::normalize(direction);
 }
