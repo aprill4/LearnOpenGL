@@ -17,6 +17,7 @@ using std::cout;
 using std::endl;
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
+void scroll_callback(GLFWwindow *window, double xpos, double ypos);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
 
@@ -38,6 +39,8 @@ bool firstMouse = true;
 float yaw = -90.0f;
 float pitch = 0.0f;
 glm::vec3 direction;
+
+float fov = 45.0f;
 
 // vertex shader source
 const char *vertexShaderSource = R"(#version 330 core
@@ -108,6 +111,7 @@ int main() {
   glfwMakeContextCurrent(window);
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
   glfwSetCursorPosCallback(window, mouse_callback);
+  glfwSetScrollCallback(window, scroll_callback);
 
   // glad: load all OpenGL function pointers
   // ---------------------------------------
@@ -343,7 +347,7 @@ int main() {
     view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
 
     projection =
-        glm::perspective(glm::radians(45.0f),
+        glm::perspective(glm::radians(fov),
                          (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
     for (int i = 0; i < cubeNum; i++) {
@@ -435,11 +439,19 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
 
   if (pitch > 89.0f)
     pitch = 89.0f;
-  if (pitch < -89.0f)
+  else if (pitch < -89.0f)
     pitch = -89.0f;
 
   direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
   direction.y = sin(glm::radians(pitch));
   direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
   cameraFront = glm::normalize(direction);
+}
+
+void scroll_callback(GLFWwindow *window, double xpos, double ypos) {
+  fov -= ypos;
+  if (fov < 1.0f)
+    fov = 1.0f;
+  else if (fov > 45.0f)
+    fov = 45.0f;
 }
