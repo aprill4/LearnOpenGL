@@ -277,6 +277,15 @@ int main() {
   glUseProgram(shaderProgram2);
   glUniform1i(glGetUniformLocation(shaderProgram2, "ourTexture"), 1);
 
+  // 10 cubes
+  const unsigned cubeNum = 10;
+  glm::vec3 cubePositions[cubeNum] = {
+      glm::vec3(0.0f, 0.0f, 0.0f),    glm::vec3(2.0f, 5.0f, -15.0f),
+      glm::vec3(-1.5f, -2.2f, -2.5f), glm::vec3(-3.8f, -2.0f, -12.3f),
+      glm::vec3(2.4f, -0.4f, -3.5f),  glm::vec3(-1.7f, 3.0f, -7.5f),
+      glm::vec3(1.3f, -2.0f, -2.5f),  glm::vec3(1.5f, 2.0f, -2.5f),
+      glm::vec3(1.5f, 0.2f, -1.5f),   glm::vec3(-1.3f, 1.0f, -1.5f)};
+
   // render loop
   // -----------
   while (!glfwWindowShouldClose(window)) {
@@ -297,35 +306,39 @@ int main() {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, textures[1]);
 
+    glUseProgram(shaderProgram1);
+    glBindVertexArray(VAO);
+
     // transform
-    glm::mat4 model = glm::mat4(1.0f);
     glm::mat4 view = glm::mat4(1.0f);
     glm::mat4 projection = glm::mat4(1.0f);
-
-    //model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f),
-                        //glm::vec3(0.5f, 1.0f, 0.0f));
-    model = glm::rotate(model, glm::radians(70.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
     float radius = 10.0f;
     float camX = sin(glfwGetTime()) * radius;
     float camZ = cos(glfwGetTime()) * radius;
     view = glm::lookAt(glm::vec3(camX, 0.f, camZ), glm::vec3(0.0f, 0.0f, 0.0f),
-                       glm::vec3(0.0f, 0.0f, 1.0f));
+                       glm::vec3(0.0f, 1.0f, 0.0f));
     projection =
         glm::perspective(glm::radians(45.0f),
                          (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
-    glUseProgram(shaderProgram1);
+    for (int i = 0; i < cubeNum; i++) {
+      glm::mat4 model = glm::mat4(1.0f);
+      model = glm::translate(model, cubePositions[i]);
+      model =
+          glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-    int modelLoc = glGetUniformLocation(shaderProgram1, "model");
-    int viewLoc = glGetUniformLocation(shaderProgram1, "view");
-    int projectionLoc = glGetUniformLocation(shaderProgram1, "projection");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+      int modelLoc = glGetUniformLocation(shaderProgram1, "model");
+      int viewLoc = glGetUniformLocation(shaderProgram1, "view");
+      int projectionLoc = glGetUniformLocation(shaderProgram1, "projection");
 
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+      glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+      glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+      glUniformMatrix4fv(projectionLoc, 1, GL_FALSE,
+                         glm::value_ptr(projection));
+
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
     /*
     glUseProgram(shaderProgram2);
