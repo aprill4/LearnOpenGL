@@ -27,6 +27,9 @@ glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 0.f);
 glm::vec3 cameraFront = glm::vec3(0.f, 0.f, -2.0);
 glm::vec3 cameraUp = glm::vec3(0.f, 1.f, 0.f);
 
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
 // vertex shader source
 const char *vertexShaderSource = R"(#version 330 core
 layout (location = 0) in vec3 aPos;
@@ -297,6 +300,10 @@ int main() {
     // -----
     processInput(window);
 
+    float currentFrame = glfwGetTime();
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
+
     // render
     // ------
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -346,27 +353,6 @@ int main() {
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 
-    /*
-    glUseProgram(shaderProgram2);
-
-    glm::mat4 trans2 = glm::mat4(1.0f);
-    //trans2 = glm::translate(trans2, glm::vec3(-0.5, 0.5, 0.0));
-    trans2 = glm::scale(trans2,
-                        glm::vec3(sin(glfwGetTime()), sin(glfwGetTime()), 1.0));
-
-    transformLoc = glGetUniformLocation(shaderProgram2, "transform");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans2));
-    // seeing as we only have a single VAO there's no need to bind it
-    // every time, but we'll do so to keep things a bit more organized
-    glBindVertexArray(VAO);
-    glUniform1i(glGetUniformLocation(shaderProgram2, "ourTexture"), 1);
-
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, textures[1]);
-
-    glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void *)(3 * sizeof(int)));
-    */
-    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0); // no need to unbind it every time
 
     // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved
@@ -392,7 +378,7 @@ int main() {
 // frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window) {
-  const float cameraSpeed = 0.05f;
+  const float cameraSpeed = 2.5f * deltaTime;
   if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     cameraPos += cameraSpeed * cameraFront;
   if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
