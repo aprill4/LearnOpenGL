@@ -58,6 +58,7 @@ void main()
 {
     gl_Position = projection * view * model * vec4(aPos, 1.0);
     TexCoord = aTexCoord;
+    vertexColor = vec3(1.f);
 })";
 
 // fragment shader source
@@ -254,14 +255,16 @@ int main() {
 
   // load container.jpg
   int width, height, nrChannels;
-  unsigned char *data =
-      stbi_load((std::string(PROJECT_SOURCE_DIR) + "/container.jpg").c_str(),
-                &width, &height, &nrChannels, 0);
+  unsigned char *data = stbi_load(
+      (std::string(PROJECT_SOURCE_DIR) + "/resources/container.jpg").c_str(),
+      &width, &height, &nrChannels, 0);
   if (data) {
     // copy data
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
                  GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    cout << "Failed to load texture" << endl;
   }
 
   // bind and configure texture
@@ -278,14 +281,16 @@ int main() {
 
   // load another image
   stbi_set_flip_vertically_on_load(true);
-  data =
-      stbi_load((std::string(PROJECT_SOURCE_DIR) + "/awesomeface.png").c_str(),
-                &width, &height, &nrChannels, 0);
+  data = stbi_load(
+      (std::string(PROJECT_SOURCE_DIR) + "/resources/awesomeface.png").c_str(),
+      &width, &height, &nrChannels, 0);
   if (data) {
     // copy data
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    cout << "Failed to load texture" << endl;
   }
 
   // delete image
@@ -346,9 +351,8 @@ int main() {
     glm::vec3 cameraTarget = cameraPos + cameraFront;
     view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
 
-    projection =
-        glm::perspective(glm::radians(fov),
-                         (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+    projection = glm::perspective(
+        glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 
     for (int i = 0; i < cubeNum; i++) {
       glm::mat4 model = glm::mat4(1.0f);
