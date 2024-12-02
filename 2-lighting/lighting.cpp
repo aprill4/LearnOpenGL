@@ -54,9 +54,10 @@ void main() {
 const char *lightcubeFragmentShaderSource = R"(
 #version 330 core
 out vec4 FragColor;
+uniform vec3 lightColor;
 
 void main() {
-  FragColor = vec4(1.f, 1.f, 0.f, 1.0f);
+  FragColor = vec4(lightColor, 1.0);
 })";
 
 int main() {
@@ -218,8 +219,8 @@ int main() {
     glUseProgram(containerShaderProgram);
     glUniform3f(glGetUniformLocation(containerShaderProgram, "objectColor"),
                 1.0f, 0.5f, 0.31f);
-    glUniform3f(glGetUniformLocation(containerShaderProgram, "lightColor"),
-                1.0f, 1.0f, 1.0f);
+    float lightColor[] = {1.0f, sin((float)glfwGetTime()), 1.0f};
+    glUniform3fv(glGetUniformLocation(containerShaderProgram, "lightColor"), 1, lightColor);
 
     glUniformMatrix4fv(glGetUniformLocation(containerShaderProgram, "model"), 1,
                        GL_FALSE, glm::value_ptr(model));
@@ -234,6 +235,8 @@ int main() {
     glBindVertexArray(0);
 
     glUseProgram(lightcubeShaderProgram);
+    glUniform3fv(glGetUniformLocation(lightcubeShaderProgram, "lightColor"), 1, lightColor);
+
     glm::vec3 lightPos = glm::vec3(1.2f, 1.0f, 0.0f);
     model = glm::mat4(1.0f);
     model = glm::translate(model, lightPos);
