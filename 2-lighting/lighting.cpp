@@ -8,10 +8,14 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+// shader class
+#include "shader.h"
 
+#include <filesystem>
 #include <iostream>
 #include <string>
-using std::cout, std::endl;
+using std::cout, std::endl, std::string;
+namespace fs = std::filesystem;
 
 constexpr unsigned SCR_WIDTH = 800;
 constexpr unsigned SCR_HEIGHT = 800;
@@ -33,204 +37,13 @@ glm::vec3 direction;
 
 float fov = 45.0f;
 
+std::string getPath(const std::string& path);
+
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 void scroll_callback(GLFWwindow *window, double xpos, double ypos);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
-
-// container vertex shader
-const char *containerVertexShaderSource = R"(
-#version 330 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aNormal;
-layout (location = 2) in vec2 aTexCoord;
-
-out vec3 Normal;
-out vec3 FragPos;
-out vec2 TexCoord;
-
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
-uniform mat4 normalMatrix;
-
-void main() {
-  gl_Position = projection * view * model * vec4(aPos, 1.0);
-  FragPos = vec3(model * vec4(aPos, 1.0));
-  Normal = mat3(normalMatrix) * aNormal; 
-  TexCoord = aTexCoord;
-})";
-
-const char *containerFragmentShaderSource = R"(
-#version 330 core
-in vec3 Normal;
-in vec3 FragPos;
-in vec2 TexCoord;
-
-out vec4 FragColor;
-
-struct Material {
-  sampler2D diffuse;
-  sampler2D specular;
-  float shinness;
-};
-
-struct DirLight {
-  vec3 direction;
-
-  vec3 ambient;
-  vec3 diffuse;
-  vec3 specular;
-};
-
-struct PointLight {
-  vec3 position;
-
-  vec3 ambient;
-  vec3 diffuse;
-  vec3 specular;
-
-  float constant;
-  float linear;
-  float quadratic;
-};
-
-struct SpotLight {
-  vec3 position;
-  vec3 direction;
-
-  vec3 ambient;
-  vec3 diffuse;
-  vec3 specular;
-
-  float constant;
-  float linear;
-  float quadratic;
-
-  float cutOff;
-  float outerCutOff;
-};
-
-uniform Material material;
-
-uniform DirLight dirLight;
-#define NR_POINT_LIGHT 4
-uniform PointLight pointLight[NR_POINT_LIGHT];
-uniform SpotLight spotLight;
-
-uniform vec3 viewPos;
-
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 fragPos);
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 viewDir, vec3 fragPos);
-
-void main() {
-  vec3 viewDir = normalize(viewPos - FragPos);
-  vec3 normal = normalize(Normal);
-
-  vec3 result = vec3(0.0f);
-  //result += CalcDirLight(dirLight, normal, viewDir);
-  
-  for (int i = 0; i < NR_POINT_LIGHT; ++i) {
-    //result += CalcPointLight(pointLight[i], normal, viewDir, FragPos);
-  }
-
-  result += CalcSpotLight(spotLight, normal, viewDir, FragPos);
-
-  FragColor = vec4(result, 1.0);
-}
-
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
-  vec3 sampleDiffuse = vec3(texture(material.diffuse, TexCoord));
-
-  vec3 ambient = sampleDiffuse * light.ambient;
-
-  vec3 lightDir = normalize(-light.direction);
-  float diff = max(dot(normal, lightDir), 0.0);
-  vec3 diffuse = sampleDiffuse * diff * light.diffuse;
-
-  vec3 reflectDir = reflect(-lightDir, normal);
-  float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shinness);
-  vec3 specular = vec3(texture(material.specular, TexCoord)) * spec * light.specular;
-
-  return (ambient + diffuse + specular);
-}
-
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 viewDir, vec3 fragPos) {
-  vec3 sampleDiffuse = vec3(texture(material.diffuse, TexCoord));
-
-  vec3 ambient = sampleDiffuse * light.ambient;
-
-  vec3 lightDir = normalize(light.position - fragPos);
-  float diff = max(dot(normal, lightDir), 0.0);
-  vec3 diffuse = sampleDiffuse * diff * light.diffuse;
-
-  vec3 reflectDir = reflect(-lightDir, normal);
-  float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shinness);
-  vec3 specular = texture(material.specular, TexCoord).rgb * spec * light.specular;
-
-  float distance = length(light.position - fragPos);
-  float attenuation = 1.0f / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
-
-  ambient *= attenuation;
-  diffuse *= attenuation;
-  specular *= attenuation;
-
-  return (ambient + diffuse + specular);
-}
-
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 viewDir, vec3 fragPos) {
-  vec3 sampleDiffuse = texture(material.diffuse, TexCoord).rgb;
-  vec3 ambient = sampleDiffuse * light.ambient;
-
-  vec3 lightDir = normalize(light.position - fragPos);
-
-  float diff = max(dot(normal, lightDir), 0.0);
-  vec3 diffuse = sampleDiffuse * diff * light.diffuse;
-
-  vec3 reflectDir = reflect(-lightDir, normal);
-  float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shinness);
-  vec3 specular = texture(material.specular, TexCoord).rgb * spec * light.specular;
-
-  float distance = length(light.position - fragPos);
-  float attenuation = 1.0f / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
-
-  ambient *= attenuation;
-  diffuse *= attenuation;
-  specular *= attenuation;
-
-  float theta = dot(lightDir, normalize(-light.direction));
-  float epsilon = light.cutOff - light.outerCutOff;
-  float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
-
-  diffuse *= intensity;
-  specular *= intensity;
-
-  return (ambient + diffuse + specular);
-}
-
-)";
-
-const char *lightcubeVertexShaderSource = R"(
-#version 330 core
-layout (location = 0) in vec3 aPos;
-
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
-
-void main() {
-  gl_Position = projection * view * model * vec4(aPos, 1.0);
-})";
-
-const char *lightcubeFragmentShaderSource = R"(
-#version 330 core
-out vec4 FragColor;
-uniform vec3 lightColor;
-
-void main() {
-  FragColor = vec4(lightColor, 1.0);
-})";
+unsigned loadTexture(const string &imagePath);
 
 int main() {
   // bubu
@@ -265,71 +78,15 @@ int main() {
     return -1;
   }
 
-  unsigned containerVertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(containerVertexShader, 1, &containerVertexShaderSource, NULL);
-  glCompileShader(containerVertexShader);
-  int success;
-  char infoLog[512];
-  glGetShaderiv(containerVertexShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(containerVertexShader, 512, NULL, infoLog);
-    cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << endl;
-  }
+  const std::string shaderPath = std::string(SUBPROJECT_SOURCE_DIR) + "/shaders";
+  const std::string lightingVertex = getPath(shaderPath + "/multiple_lights.vs");
+  const std::string lightingFragment = getPath(shaderPath + "/multiple_lights.fs");
 
-  unsigned containerFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(containerFragmentShader, 1, &containerFragmentShaderSource,
-                 NULL);
-  glCompileShader(containerFragmentShader);
-  glGetShaderiv(containerFragmentShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(containerFragmentShader, 512, NULL, infoLog);
-    cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << endl;
-  }
+  const std::string lightCubeVertex = getPath(shaderPath + "/light_cube.vs");
+  const std::string lightCubeFragment = getPath(shaderPath + "/light_cube.fs");
 
-  unsigned containerShaderProgram = glCreateProgram();
-  glAttachShader(containerShaderProgram, containerVertexShader);
-  glAttachShader(containerShaderProgram, containerFragmentShader);
-  glLinkProgram(containerShaderProgram);
-  glGetProgramiv(containerShaderProgram, GL_LINK_STATUS, &success);
-  if (!success) {
-    glGetProgramInfoLog(containerShaderProgram, 512, NULL, infoLog);
-    cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << endl;
-  }
-
-  glDeleteShader(containerVertexShader);
-  glDeleteShader(containerFragmentShader);
-
-  unsigned lightcubeVertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(lightcubeVertexShader, 1, &lightcubeVertexShaderSource, NULL);
-  glCompileShader(lightcubeVertexShader);
-  glGetShaderiv(lightcubeVertexShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(lightcubeVertexShader, 512, NULL, infoLog);
-    cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << endl;
-  }
-
-  unsigned lightcubeFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(lightcubeFragmentShader, 1, &lightcubeFragmentShaderSource,
-                 NULL);
-  glCompileShader(lightcubeFragmentShader);
-  glGetShaderiv(lightcubeFragmentShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(lightcubeFragmentShader, 512, NULL, infoLog);
-    cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << endl;
-  }
-
-  unsigned lightcubeShaderProgram = glCreateProgram();
-  glAttachShader(lightcubeShaderProgram, lightcubeVertexShader);
-  glAttachShader(lightcubeShaderProgram, lightcubeFragmentShader);
-  glLinkProgram(lightcubeShaderProgram);
-  glGetProgramiv(lightcubeShaderProgram, GL_LINK_STATUS, &success);
-  if (!success) {
-    glGetProgramInfoLog(lightcubeShaderProgram, 512, NULL, infoLog);
-    cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << endl;
-  }
-
-  glDeleteShader(lightcubeVertexShader);
-  glDeleteShader(lightcubeFragmentShader);
+  Shader lighting(lightingVertex, lightingFragment);
+  Shader lightCube(lightCubeVertex, lightCubeFragment);
 
   // set up vertes attributes
   float vertices[] = {
@@ -397,64 +154,8 @@ int main() {
   glEnable(GL_DEPTH_TEST);
 
   // texture
-  unsigned textures[2];
-  glGenTextures(2, textures);
-
-  // texture unit 0
-  glBindTexture(GL_TEXTURE_2D, textures[0]);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  int width, height, nrChannels;
-#ifdef __APPLE__
-  unsigned char *data = stbi_load(
-      (std::string(PROJECT_SOURCE_DIR) + "/resources/container2.png").c_str(),
-      &width, &height, &nrChannels, 0);
-#else
-  unsigned char *data = stbi_load(
-      (std::string(PROJECT_SOURCE_DIR) + "\\resources\\container2.png").c_str(),
-      &width, &height, &nrChannels, 0);
-#endif
-  if (data) {
-    // copy data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-    cout << "Failed to load texture" << endl;
-  }
-
-  // texture unit 1
-  glBindTexture(GL_TEXTURE_2D, textures[1]);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-#ifdef __APPLE__
-  data = stbi_load(
-      (std::string(PROJECT_SOURCE_DIR) + "/resources/container2_specular.png")
-          .c_str(),
-      &width, &height, &nrChannels, 0);
-#else
-  data = stbi_load(
-      (std::string(PROJECT_SOURCE_DIR) + "\\resources\\container2_specular.png")
-          .c_str(),
-      &width, &height, &nrChannels, 0);
-#endif
-  if (data) {
-    // copy data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-  } else {
-    cout << "Failed to load texture" << endl;
-  }
-
-  stbi_image_free(data);
+  unsigned diffuseMap = loadTexture(getPath((std::string(PROJECT_SOURCE_DIR) + "/resources/container2.png")));
+  unsigned specularMap = loadTexture(getPath((std::string(PROJECT_SOURCE_DIR) + "/resources/container2_specular.png")));
 
   const unsigned cubeNum = 10;
   glm::vec3 cubePositions[] = {
@@ -477,11 +178,12 @@ int main() {
   glm::vec3 diffuseColor = lightColor * 0.5f;
   glm::vec3 ambientColor = diffuseColor * 0.2f;
 
-  glUseProgram(containerShaderProgram);
-  glUniform1i(glGetUniformLocation(containerShaderProgram, "material.diffuse"),
-              0);
-  glUniform1i(glGetUniformLocation(containerShaderProgram, "material.specular"),
-              1);
+  glm::vec3 pinkLight = glm::vec3(0.8f, 0.5f, 0.2f);
+
+  lighting.use();
+  lighting.setInt("material.diffuse", 0);
+  lighting.setInt("material.specular", 1);
+  lighting.setFloat("material.shinness", 32.0f);
 
   for (int i = 0; i < 4; ++i) {
     std::string index = std::to_string(i); // Convert i to string properly
@@ -497,82 +199,32 @@ int main() {
     std::string pointLightDiffuse = pointLight + ".diffuse";
     std::string pointLightSpecular = pointLight + ".specular";
 
-    glUniform3fv(glGetUniformLocation(containerShaderProgram,
-                                      pointLightPosition.c_str()),
-                 1, glm::value_ptr(pointLightPositions[i]));
-    glUniform1f(glGetUniformLocation(containerShaderProgram,
-                                     pointLightConstant.c_str()),
-                1.0f);
-    glUniform1f(
-        glGetUniformLocation(containerShaderProgram, pointLightLinear.c_str()),
-        0.09f);
-    glUniform1f(glGetUniformLocation(containerShaderProgram,
-                                     pointLightQuadratic.c_str()),
-                0.032f);
+    lighting.setVec3(pointLightPosition.c_str(), pointLightPositions[i]);
+    lighting.setFloat(pointLightConstant.c_str(), 1.0f);
+    lighting.setFloat(pointLightLinear.c_str(), 0.09f);
+    lighting.setFloat(pointLightQuadratic.c_str(), 0.032f);
 
-    glUniform3fv(
-        glGetUniformLocation(containerShaderProgram, pointLightAmbient.c_str()),
-        1, glm::value_ptr(ambientColor));
-    glUniform3fv(
-        glGetUniformLocation(containerShaderProgram, pointLightDiffuse.c_str()),
-        1, glm::value_ptr(diffuseColor));
-    glUniform3f(glGetUniformLocation(containerShaderProgram,
-                                     pointLightSpecular.c_str()),
-                1.0f, 1.0f, 1.0f);
+    lighting.setVec3(pointLightAmbient.c_str(), ambientColor);
+    lighting.setVec3(pointLightDiffuse.c_str(), ambientColor);
+    lighting.setVec3(pointLightSpecular.c_str(), 1.0f, 1.0f, 1.0f);
   }
 
-  glUniform3fv(glGetUniformLocation(containerShaderProgram, "viewPos"), 1,
-               glm::value_ptr(cameraPos));
-  glUniform3f(glGetUniformLocation(containerShaderProgram, "material.ambient"),
-              1.0f, 0.5f, 0.31f);
-  glUniform3f(glGetUniformLocation(containerShaderProgram, "material.diffuse"),
-              1.0f, 0.5f, 0.31f);
-  glUniform3f(glGetUniformLocation(containerShaderProgram, "material.specular"),
-              0.5f, 0.5f, 0.5f);
-  glUniform1f(glGetUniformLocation(containerShaderProgram, "material.shinness"),
-              32.0f);
-  // float lightColor[] = {1.0f, sin((float)glfwGetTime()), 1.0f};
-  glUniform3fv(
-      glGetUniformLocation(containerShaderProgram, "spotLight.position"), 1,
-      glm::value_ptr(cameraPos));
-  glUniform3fv(
-      glGetUniformLocation(containerShaderProgram, "spotLight.direction"), 1,
-      glm::value_ptr(cameraFront));
 
-  glUniform1f(
-      glGetUniformLocation(containerShaderProgram, "spotLight.constant"), 1.0f);
-  glUniform1f(glGetUniformLocation(containerShaderProgram, "spotLight.linear"),
-              0.09f);
-  glUniform1f(
-      glGetUniformLocation(containerShaderProgram, "spotLight.quadratic"),
-      0.032f);
+  lighting.setFloat("spotLight.constant", 1.0f);
+  lighting.setFloat("spotLight.linear", 0.09f);
+  lighting.setFloat("spotLight.quadratic", 0.032f);
 
-  glUniform1f(glGetUniformLocation(containerShaderProgram, "spotLight.cutOff"),
-              glm::cos(glm::radians(12.5f)));
-  glUniform1f(
-      glGetUniformLocation(containerShaderProgram, "spotLight.outerCutOff"),
-      glm::cos(glm::radians(17.5f)));
+  lighting.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+  lighting.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
 
-  glm::vec3 spotLightColor = glm::vec3(0.1f, 0.f, 0.2f);
-  glUniform3fv(
-      glGetUniformLocation(containerShaderProgram, "spotLight.ambient"), 1,
-      glm::value_ptr(ambientColor));
-  glUniform3fv(
-      glGetUniformLocation(containerShaderProgram, "spotLight.diffuse"), 1,
-      glm::value_ptr(diffuseColor));
-  glUniform3f(
-      glGetUniformLocation(containerShaderProgram, "spotLight.specular"), 1.0f,
-      1.0f, 1.0f);
+  lighting.setVec3("spotLight.ambient", ambientColor);
+  lighting.setVec3("spotLight.diffuse", diffuseColor);
+  lighting.setVec3("spotLight.specular", 1.0f, 1.0f, 1.0f);
 
-  glUniform3f(
-      glGetUniformLocation(containerShaderProgram, "dirLight.direction"), -0.2f,
-      -1.0f, -0.3f);
-  glUniform3fv(glGetUniformLocation(containerShaderProgram, "dirLight.ambient"),
-               1, glm::value_ptr(ambientColor));
-  glUniform3fv(glGetUniformLocation(containerShaderProgram, "dirLight.diffuse"),
-               1, glm::value_ptr(diffuseColor));
-  glUniform3f(glGetUniformLocation(containerShaderProgram, "dirLight.specular"),
-              1.0f, 1.0f, 1.0f);
+  lighting.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+  lighting.setVec3("dirLight.ambient", ambientColor);
+  lighting.setVec3("dirLight.diffuse", diffuseColor);
+  lighting.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
 
   while (!glfwWindowShouldClose(window)) {
     processInput(window);
@@ -596,44 +248,36 @@ int main() {
         glm::radians(fov), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
     glm::mat4 normalMatrix = glm::transpose(glm::inverse(model));
 
-    glUseProgram(containerShaderProgram);
+    lighting.use();
+    lighting.setVec3("viewPos", cameraPos);
+    lighting.setVec3("spotLight.position", cameraPos);
+    lighting.setVec3("spotLight.direction", cameraFront);
 
-    glUniformMatrix4fv(glGetUniformLocation(containerShaderProgram, "view"), 1,
-                       GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(
-        glGetUniformLocation(containerShaderProgram, "projection"), 1, GL_FALSE,
-        glm::value_ptr(projection));
-    glUniformMatrix4fv(
-        glGetUniformLocation(containerShaderProgram, "normalMatrix"), 1,
-        GL_FALSE, glm::value_ptr(normalMatrix));
+    lighting.setMat4("view", view);
+    lighting.setMat4("projection", projection);
+    lighting.setMat4("normalMatrix", normalMatrix);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textures[0]);
+    glBindTexture(GL_TEXTURE_2D, diffuseMap);
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, textures[1]);
+    glBindTexture(GL_TEXTURE_2D, specularMap);
 
     for (int i = 0; i < cubeNum; ++i) {
       model = glm::mat4(1.0f);
       // model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f),
       //                     glm::vec3(1.0f, 0.0f, 0.0f));
       model = glm::translate(model, cubePositions[i]);
-      glUniformMatrix4fv(glGetUniformLocation(containerShaderProgram, "model"),
-                         1, GL_FALSE, glm::value_ptr(model));
+      lighting.setMat4("model", model);
 
       glBindVertexArray(containerVAO);
       glDrawArrays(GL_TRIANGLES, 0, 36);
     }
     glBindVertexArray(0);
 
-    glUseProgram(lightcubeShaderProgram);
-    glUniform3fv(glGetUniformLocation(lightcubeShaderProgram, "lightColor"), 1,
-                 glm::value_ptr(lightColor));
-
-    glUniformMatrix4fv(glGetUniformLocation(lightcubeShaderProgram, "view"), 1,
-                       GL_FALSE, glm::value_ptr(view));
-    glUniformMatrix4fv(
-        glGetUniformLocation(lightcubeShaderProgram, "projection"), 1, GL_FALSE,
-        glm::value_ptr(projection));
+    lightCube.use();
+    lightCube.setVec3("lightColor", lightColor);
+    lightCube.setMat4("view", view);
+    lightCube.setMat4("projection", projection);
 
     for (int i = 0; i < 4; ++i) {
 
@@ -641,8 +285,7 @@ int main() {
       model = glm::translate(model, pointLightPositions[i]);
       model = glm::scale(model, glm::vec3(0.2f));
 
-      glUniformMatrix4fv(glGetUniformLocation(lightcubeShaderProgram, "model"),
-                         1, GL_FALSE, glm::value_ptr(model));
+      lightCube.setMat4("model", model);
 
       glBindVertexArray(lightcubeVAO);
       glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -657,8 +300,6 @@ int main() {
   glDeleteVertexArrays(1, &containerVAO);
   glDeleteVertexArrays(1, &lightcubeVAO);
   glDeleteBuffers(1, &VBO);
-  glDeleteProgram(containerShaderProgram);
-  glDeleteProgram(lightcubeShaderProgram);
 
   glfwTerminate();
   return 0;
@@ -731,4 +372,45 @@ void scroll_callback(GLFWwindow *window, double xpos, double ypos) {
   } else if (fov > 45.0f) {
     fov = 45.0f;
   }
+}
+
+unsigned loadTexture(const std::string &imagePath) {
+  unsigned textureID;
+  glGenTextures(1, &textureID);
+
+
+  int width, height, nrChannels;
+  unsigned char *data = stbi_load(imagePath.c_str(), &width, &height, &nrChannels, 0);
+
+  if (data) {
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                    GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    GLenum format;
+    if (nrChannels == 1)
+        format = GL_RED;
+    else if (nrChannels == 3)
+        format = GL_RGB;
+    else if (nrChannels == 4)
+        format = GL_RGBA;
+    // copy data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+  } else {
+    cout << "ERROR: Failed to load texture: " << imagePath << endl;
+  }
+
+  stbi_image_free(data);
+
+  return textureID;
+}
+
+std::string getPath(const std::string& path) {
+    fs::path fsPath(path);
+    return fsPath.make_preferred().string();
 }
