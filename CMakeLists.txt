@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.10)
 project(opengl-projects)
 
 # Explicitly set the compiler
-set(CMAKE_C_COMPILER "clang")
-set(CMAKE_CXX_COMPILER "clang++")
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -18,9 +15,12 @@ add_library(glad STATIC
     glad/src/glad.c
 )
 
+
 target_include_directories(glad PUBLIC
     glad/include
 )
+
+add_subdirectory(assimp)
 
 add_definitions(-DPROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
@@ -31,6 +31,7 @@ function(setup_opengl_project PROJECT_NAME SOURCE_FILE)
     target_include_directories(${PROJECT_NAME}
         PRIVATE
         ${CMAKE_SOURCE_DIR}/glad/include
+        ${CMAKE_SOURCE_DIR}/assimp/include
         ${CMAKE_SOURCE_DIR} # This will allow including stb_image.h from the source directory
         ${CMAKE_SOURCE_DIR}/glm  # Add this line to include GLM headers
     )
@@ -38,6 +39,7 @@ function(setup_opengl_project PROJECT_NAME SOURCE_FILE)
     target_link_libraries(${PROJECT_NAME}
         PRIVATE
         glad
+        assimp
         "-framework OpenGL"
         "-framework CoreVideo"
         "-framework IOKit"
@@ -50,3 +52,4 @@ endfunction()
 # Add subdirectories for each project
 add_subdirectory(1-getting-started)
 add_subdirectory(2-lighting)
+add_subdirectory(3-model-loading)
