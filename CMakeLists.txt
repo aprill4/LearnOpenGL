@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(opengl-projects)
+project(opengl-projects) # 孩补补母鸡风补补改糯
 
 # Explicitly set the compiler
 set(CMAKE_CXX_STANDARD 17)
@@ -20,6 +20,9 @@ target_include_directories(glad PUBLIC
     glad/include
 )
 
+set(BUILD_SHARED_LIBS OFF)
+set(ASSIMP_BUILD_STATIC_LIB ON)
+set(ASSIMP_BUILD_SHARED_LIB OFF)
 add_subdirectory(assimp)
 
 add_definitions(-DPROJECT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
